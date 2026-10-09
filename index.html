@@ -34,21 +34,17 @@ textarea{width:100%;min-height:70px;resize:vertical}
 .big{width:100%;padding:16px;font-size:18px}
 .toast{position:sticky;bottom:12px;background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:12px;display:none;gap:10px;align-items:center;justify-content:space-between}
 .toast a{color:#fff;background:#25a244;padding:8px 12px;border-radius:10px;text-decoration:none;font-weight:600;white-space:nowrap}
-.hide{display:none}.d.b{border:2px solid var(--acc)}.over{font-size:12px;color:#c2410c;font-weight:600}.ds{padding:6px;max-width:112px}
+.hide{display:none}.sh{font-weight:700;margin:12px 0 2px}.d small{letter-spacing:-1px}.d.b{border:2px solid var(--acc)}.over{font-size:12px;color:#c2410c;font-weight:600}.ds{padding:6px;max-width:112px}
 </style>
 </head>
 <body>
 <main>
   <div class="row sp"><h1>🧹 Flat Rota</h1><label class="mute">I'm <select id="me"></select></label></div>
-  <div class="tabs"><button data-t="rota" class="on">Rota</button><button data-t="bins">Bins</button><button data-t="notes">Notes</button></div>
+  <div class="tabs"><button data-t="rota" class="on">Tasks</button><button data-t="bins">Bins</button><button data-t="notes">Notes</button><button data-t="cal">Calendar</button></div>
 
   <section id="t-rota">
     <div class="card"><div class="row sp"><button id="prev">‹</button><div style="text-align:center"><b id="wk"></b><div class="mute" id="wkn"></div></div><button id="next">›</button></div></div>
     <div class="card"><div class="mute">Cleaning this week</div><div class="turn" id="turn"></div><div class="bar"><i id="prog"></i></div><div class="mute" id="upnext" style="margin-top:8px"></div><div class="row" style="margin-top:10px"><label class="mute">Date done <input type="date" id="dd"></label></div><div id="tasks" style="margin-top:6px"></div></div>
-    <div class="card">
-      <div class="row sp" style="margin-bottom:10px"><button id="pm">‹</button><b id="mt"></b><button id="nm">›</button></div>
-      <div class="cal" id="cal"></div><div id="dayinfo" class="mute" style="margin-top:10px">Tap a day to book it for cleaning or see what happened.</div>
-    </div>
   </section>
 
   <section id="t-bins" class="hide">
@@ -60,6 +56,13 @@ textarea{width:100%;min-height:70px;resize:vertical}
   <section id="t-notes" class="hide">
     <div class="card"><textarea id="ntext" placeholder="Out of bin bags, boiler noise, guests coming…"></textarea><p><button class="p" id="nadd">Add note</button></p></div>
     <div class="card"><div id="nlist"></div></div>
+  </section>
+
+  <section id="t-cal" class="hide">
+    <div class="card">
+      <div class="row sp" style="margin-bottom:10px"><button id="pm">‹</button><b id="mt"></b><button id="nm">›</button></div>
+      <div class="mute" id="msum" style="margin-bottom:10px"></div><div class="cal" id="cal"></div><div id="dayinfo" class="mute" style="margin-top:10px">Tap a day to book it for cleaning or see what happened.</div>
+    </div>
   </section>
 
   <details class="card"><summary><b>Settings</b></summary>
@@ -123,28 +126,33 @@ function render(){
 function renderCal(){
   const y=cm.getFullYear(),m=cm.getMonth(),first=new Date(y,m,1),days=new Date(y,m+1,0).getDate(),off=(first.getDay()+6)%7;
   $("mt").textContent=first.toLocaleDateString("en-GB",{month:"long",year:"numeric"});
-  const by={},pl={};
-  S.log.forEach(l=>{const k=ymd(new Date(l.at));(by[k]=by[k]||[]).push("✅ <b>"+esc(l.by)+"</b> – "+esc(l.task))});
-  S.bins.forEach(l=>{const k=ymd(new Date(l.at));(by[k]=by[k]||[]).push("🗑️ <b>"+esc(l.by)+"</b> emptied the bin")});
-  S.plan.forEach(p=>{(pl[p.day]=pl[p.day]||[]).push(p)});
-  window._by=by;window._pl=pl;
+  const D={lg:{},bn:{},nt:{},pl:{}},add=(t,k,o)=>(D[t][k]=D[t][k]||[]).push(o),mk=t=>ymd(new Date(t));
+  S.log.forEach(l=>add("lg",mk(l.at),l));S.bins.forEach(l=>add("bn",mk(l.at),l));S.notes.forEach(l=>add("nt",mk(l.at),l));S.plan.forEach(p=>add("pl",p.day,p));
+  window._D=D;
+  const pre=y+"-"+pad(m+1)+"-",cnt=t=>Object.keys(D[t]).filter(k=>k.startsWith(pre)).reduce((n,k)=>n+D[t][k].length,0);
+  $("msum").textContent=`This month: ✅ ${cnt("lg")} tasks · 🗑️ ${cnt("bn")} bin runs · 📝 ${cnt("nt")} notes · 📅 ${cnt("pl")} booked`;
   let h=["M","T","W","T","F","S","S"].map(x=>`<div class="h">${x}</div>`).join("")+"<div></div>".repeat(off);
-  for(let d=1;d<=days;d++){const k=y+"-"+pad(m+1)+"-"+pad(d),n=(by[k]||[]).length,b=pl[k]||[];
-    h+=`<div class="d${n?" n":""}${b.length?" b":""}${k===ymd(new Date())?" t":""}${k===selDay?" sel":""}" data-k="${k}">${d}${b.length?`<small>📅 ${esc(b.map(x=>x.by.slice(0,2)).join(","))}</small>`:n?`<small>${n}✓</small>`:""}</div>`}
+  for(let d=1;d<=days;d++){const k=pre+pad(d),a=(D.lg[k]||[]).length,bn=(D.bn[k]||[]).length,nt=(D.nt[k]||[]).length,pl=(D.pl[k]||[]).length;
+    const ic=(a?"✅":"")+(bn?"🗑️":"")+(nt?"📝":"")+(pl?"📅":"");
+    h+=`<div class="d${a||bn||nt?" n":""}${pl?" b":""}${k===ymd(new Date())?" t":""}${k===selDay?" sel":""}" data-k="${k}">${d}${ic?`<small>${ic}</small>`:""}</div>`}
   $("cal").innerHTML=h;
   document.querySelectorAll("[data-k]").forEach(el=>el.onclick=()=>{selDay=el.dataset.k;renderCal()});
   renderDay();
 }
 function renderDay(){
   const el=$("dayinfo");
-  if(!selDay){el.className="mute";el.innerHTML="Tap a day to book it for cleaning or see what happened.";return}
+  if(!selDay){el.className="mute";el.innerHTML="Tap a day to see a summary, or to book it for cleaning.";return}
   el.className="";el.style.fontSize="14px";
-  const b=window._pl[selDay]||[],inf=window._by[selDay]||[],dt=new Date(selDay+"T00:00:00");
-  el.innerHTML=`<div style="font-weight:700;margin-bottom:6px">${dt.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}</div>`+
-    b.map((p,i)=>`<div class="item"><span>📅 <b>${esc(p.by)}</b> is cleaning${p.note?" – "+esc(p.note):""}</span><button class="x" data-px="${i}" title="Remove">×</button></div>`).join("")+
-    inf.map(x=>`<div class="item"><span>${x}</span></div>`).join("")+
-    `<div class="row" style="margin-top:10px"><input id="pnote" placeholder="Note (optional), e.g. mopping" style="flex:1;min-width:0"><button class="p" id="pbook">Book as ${esc(me)}</button></div>`;
-  el.querySelectorAll("[data-px]").forEach(bt=>bt.onclick=()=>delItem("plan",b[+bt.dataset.px]));
+  const D=window._D,pl=D.pl[selDay]||[],lg=D.lg[selDay]||[],bn=D.bn[selDay]||[],nt=D.nt[selDay]||[],dt=new Date(selDay+"T00:00:00");
+  const sec=(t,rows)=>rows.length?`<div class="sh">${t}</div>`+rows.join(""):"";
+  el.innerHTML=`<div style="font-weight:700;font-size:16px">${dt.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}</div>`+
+    sec("📅 Booked ("+pl.length+")",pl.map((p,i)=>`<div class="item"><span><b>${esc(p.by)}</b> is cleaning${p.note?" – "+esc(p.note):""}</span><button class="x" data-px="${i}" title="Remove">×</button></div>`))+
+    sec("✅ Tasks done ("+lg.length+")",lg.map(l=>`<div class="item"><span><b>${esc(l.by)}</b> – ${esc(l.task)}</span></div>`))+
+    sec("🗑️ Bins emptied ("+bn.length+")",bn.map(l=>`<div class="item"><span><b>${esc(l.by)}</b></span></div>`))+
+    sec("📝 Notes ("+nt.length+")",nt.map(n=>`<div class="item"><span><b>${esc(n.by)}</b>: ${esc(n.text).replace(/\n/g," ")}</span></div>`))+
+    (pl.length||lg.length||bn.length||nt.length?"":`<p class="mute">Nothing logged on this day.</p>`)+
+    `<div class="row" style="margin-top:12px"><input id="pnote" placeholder="Note (optional), e.g. mopping" style="flex:1;min-width:0"><button class="p" id="pbook">Book as ${esc(me)}</button></div>`;
+  el.querySelectorAll("[data-px]").forEach(bt=>bt.onclick=()=>delItem("plan",pl[+bt.dataset.px]));
   $("pbook").onclick=()=>{const note=$("pnote").value.trim(),o={day:selDay,by:me,at:Date.now()};if(note)o.note=note;
     addItem("plan",o);toast("Booked!",`📅 ${me} is cleaning on ${dt.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}${note?" ("+note+")":""}.`)};
 }
@@ -162,7 +170,7 @@ function renderNotes(){
   $("nlist").innerHTML=L.map((n,i)=>`<div class="item"><span>${esc(n.text).replace(/\n/g,"<br>")}<div class="mute">${esc(n.by)} · ${ago(n.at)}</div></span><button class="x" data-nx="${i}" title="Delete">×</button></div>`).join("")||`<p class="mute">No notes yet.</p>`;
   document.querySelectorAll("[data-nx]").forEach(b=>b.onclick=()=>delItem("notes",L[+b.dataset.nx]));
 }
-document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));["rota","bins","notes"].forEach(t=>$("t-"+t).classList.toggle("hide",t!==b.dataset.t))});
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));["rota","bins","notes","cal"].forEach(t=>$("t-"+t).classList.toggle("hide",t!==b.dataset.t))});
 $("bin").onclick=()=>{const v=$("bd").value,on=v&&v!==ymd(new Date())?" on "+fmt(new Date(v+"T12:00:00")):"";addItem("bins",{by:me,at:when(v)});$("bd").value=ymd(new Date());toast("Logged!",`🗑️ ${me} emptied the bins${on}.`)};
 $("nadd").onclick=()=>{const t=$("ntext").value.trim();if(!t)return;$("ntext").value="";addItem("notes",{by:me,text:t,at:Date.now()})};
 $("prev").onclick=()=>{wkOff--;setDD();render()};$("next").onclick=()=>{wkOff++;setDD();render()};
