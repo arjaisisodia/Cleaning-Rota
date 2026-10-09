@@ -44,7 +44,7 @@ textarea{width:100%;min-height:70px;resize:vertical}
 
   <section id="t-rota">
     <div class="card"><div class="row sp"><button id="prev">‹</button><div style="text-align:center"><b id="wk"></b><div class="mute" id="wkn"></div></div><button id="next">›</button></div></div>
-    <div class="card"><div class="mute">Cleaning this week</div><div class="turn" id="turn"></div><div class="bar"><i id="prog"></i></div><div class="mute" id="upnext" style="margin-top:8px"></div><div id="tasks" style="margin-top:6px"></div></div>
+    <div class="card"><div class="mute">Cleaning this week</div><div class="turn" id="turn"></div><div class="bar"><i id="prog"></i></div><div class="mute" id="upnext" style="margin-top:8px"></div><div class="row" style="margin-top:10px"><label class="mute">Date done <input type="date" id="dd"></label></div><div id="tasks" style="margin-top:6px"></div></div>
     <div class="card">
       <div class="row sp" style="margin-bottom:10px"><button id="pm">‹</button><b id="mt"></b><button id="nm">›</button></div>
       <div class="cal" id="cal"></div><div id="dayinfo" class="mute" style="margin-top:10px">Tap a day to book it for cleaning or see what happened.</div>
@@ -52,7 +52,7 @@ textarea{width:100%;min-height:70px;resize:vertical}
   </section>
 
   <section id="t-bins" class="hide">
-    <div class="card"><button class="p big" id="bin">🗑️ I emptied the bin</button><div class="mute" id="lastbin" style="margin-top:10px"></div></div>
+    <div class="card"><button class="p big" id="bin">🗑️ I emptied the bin</button><div class="row" style="margin-top:10px"><label class="mute">Date <input type="date" id="bd"></label></div><div class="mute" id="lastbin" style="margin-top:10px"></div></div>
     <div class="card"><h2>This month</h2><div id="bincount"></div></div>
     <div class="card"><h2>Recent</h2><div id="binlog"></div></div>
   </section>
@@ -95,6 +95,8 @@ function persist(){try{localStorage.setItem("rota-state",JSON.stringify(S))}catc
 function fail(){$("sync").textContent="Couldn't sync – changes may not be shared."}
 function addItem(f,o){S[f].push(o);if(ref)ref.set({[f]:FV().arrayUnion(o)},{merge:true}).catch(fail);else persist();render()}
 function delItem(f,o){S[f]=S[f].filter(x=>JSON.stringify(x)!==JSON.stringify(o));if(ref)ref.set({[f]:FV().arrayRemove(o)},{merge:true}).catch(fail);else persist();render()}
+function when(v){return(!v||v===ymd(new Date()))?Date.now():new Date(v+"T12:00:00").getTime()}
+function setDD(){$("dd").value=wkOff===0?ymd(new Date()):ymd(monday(wkOff));$("bd").value=ymd(new Date())}
 function toast(msg,txt){$("tmsg").textContent=msg;$("wa").href="https://wa.me/?text="+encodeURIComponent(txt);const el=$("toast");el.style.display="flex";clearTimeout(window._t);window._t=setTimeout(()=>el.style.display="none",12000)}
 
 function render(){
@@ -109,9 +111,9 @@ function render(){
   $("prog").style.width=(S.tasks.length?done/S.tasks.length*100:0)+"%";
   $("tasks").innerHTML=S.tasks.map((t,i)=>{const e=S.log.find(l=>l.k===key+"|"+t);
     return `<div class="task${e?" done":""}"><div class="nm">${esc(t)}</div>`+(e?`<span class="chip">✓ ${esc(e.by)}</span><button data-u="${i}" title="Undo">↩</button>`:`<button class="p" data-d="${i}">Done</button>`)+`</div>`}).join("")||`<p class="mute">Add tasks in Settings.</p>`;
-  document.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{const t=S.tasks[+b.dataset.d];addItem("log",{k:key+"|"+t,task:t,by:me,at:Date.now()});
+  document.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{const t=S.tasks[+b.dataset.d];const dv=$("dd").value,on=dv&&dv!==ymd(new Date())?" on "+fmt(new Date(dv+"T12:00:00")):"";addItem("log",{k:key+"|"+t,task:t,by:me,at:when(dv)});
     const left=S.tasks.filter(x=>!S.log.some(l=>l.k===key+"|"+x)).length;
-    toast("Marked done!",left?`✅ ${me} did "${t}" (week of ${fmt(mon)}). ${left} left this week.`:`🎉 ${me} finished all the cleaning for the week of ${fmt(mon)}!`)});
+    toast("Marked done!",left?`✅ ${me} did "${t}"${on} (week of ${fmt(mon)}). ${left} left this week.`:`🎉 ${me} finished all the cleaning for the week of ${fmt(mon)}!`)});
   document.querySelectorAll("[data-u]").forEach(b=>b.onclick=()=>{const e=S.log.find(l=>l.k===key+"|"+S.tasks[+b.dataset.u]);if(e)delItem("log",e)});
   const td=ymd(new Date()),up=S.plan.filter(p=>p.day>=td).sort((a,b)=>a.day<b.day?-1:1).slice(0,3);
   $("upnext").innerHTML=up.length?"📅 Booked: "+up.map(p=>"<b>"+esc(p.by)+"</b> "+new Date(p.day+"T00:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})).join(" · "):"📅 No cleaning days booked yet – pick one on the calendar.";
@@ -161,9 +163,9 @@ function renderNotes(){
   document.querySelectorAll("[data-nx]").forEach(b=>b.onclick=()=>delItem("notes",L[+b.dataset.nx]));
 }
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));["rota","bins","notes"].forEach(t=>$("t-"+t).classList.toggle("hide",t!==b.dataset.t))});
-$("bin").onclick=()=>{addItem("bins",{by:me,at:Date.now()});toast("Logged!",`🗑️ ${me} emptied the bins.`)};
+$("bin").onclick=()=>{const v=$("bd").value,on=v&&v!==ymd(new Date())?" on "+fmt(new Date(v+"T12:00:00")):"";addItem("bins",{by:me,at:when(v)});$("bd").value=ymd(new Date());toast("Logged!",`🗑️ ${me} emptied the bins${on}.`)};
 $("nadd").onclick=()=>{const t=$("ntext").value.trim();if(!t)return;$("ntext").value="";addItem("notes",{by:me,text:t,at:Date.now()})};
-$("prev").onclick=()=>{wkOff--;render()};$("next").onclick=()=>{wkOff++;render()};
+$("prev").onclick=()=>{wkOff--;setDD();render()};$("next").onclick=()=>{wkOff++;setDD();render()};
 $("pm").onclick=()=>{cm=new Date(cm.getFullYear(),cm.getMonth()-1,1);renderCal()};
 $("nm").onclick=()=>{cm=new Date(cm.getFullYear(),cm.getMonth()+1,1);renderCal()};
 $("me").onchange=e=>{me=e.target.value;try{localStorage.setItem("rota-me",me)}catch(x){}render()};
@@ -171,7 +173,7 @@ $("save").onclick=()=>{
   const p=$("ppl").value.split(",").map(x=>x.trim()).filter(Boolean),t=$("tsk").value.split(",").map(x=>x.trim()).filter(Boolean);
   if(p.length)S.people=p;S.tasks=t;if(ref)ref.set({people:S.people,tasks:S.tasks},{merge:true}).catch(fail);else persist();render()};
 try{const s=localStorage.getItem("rota-state");if(s)S=Object.assign({},DEF,JSON.parse(s))}catch(e){}
-render();
+setDD();render();
 (function(){
   try{
     if(FIREBASE_CONFIG.projectId==="PASTE_HERE"||!window.firebase){$("sync").textContent="Not connected yet – add your Firebase config at the top of the file. Using this device only.";return}
