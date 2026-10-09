@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Flat Cleaning Rota</title>
+<style>
+:root{--bg:#f6f7f4;--card:#fff;--ink:#1d2421;--mute:#6b756f;--line:#e2e6e1;--acc:#2f7d5b;--accbg:#e3f2ea;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141816;--card:#1d2321;--ink:#e8ece9;--mute:#98a39d;--line:#2d3532;--acc:#4cb887;--accbg:#1f3a2e}}
+:root[data-theme="dark"]{--bg:#141816;--card:#1d2321;--ink:#e8ece9;--mute:#98a39d;--line:#2d3532;--acc:#4cb887;--accbg:#1f3a2e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 12px}h2{font-size:15px;margin:0 0 10px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+.row{display:flex;align-items:center;gap:10px}.sp{justify-content:space-between}
+button,select,input,textarea{font:inherit;color:inherit}
+button{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 12px;cursor:pointer}
+button.p{background:var(--acc);border-color:var(--acc);color:#fff}
+select,input,textarea{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:8px 10px;max-width:100%}
+textarea{width:100%;min-height:70px;resize:vertical}
+.tabs{display:flex;gap:6px;margin-bottom:14px}.tabs button{flex:1;font-weight:600}.tabs button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.task{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.task:first-of-type{border-top:0}
+.done .nm{text-decoration:line-through;color:var(--mute)}
+.chip{font-size:12px;padding:2px 8px;border-radius:99px;background:var(--accbg);color:var(--acc)}
+.nm{flex:1;font-weight:600}.mute{color:var(--mute);font-size:13px}
+.turn{font-size:18px;font-weight:700}.bar{height:8px;border-radius:99px;background:var(--line);margin-top:10px;overflow:hidden}.bar i{display:block;height:100%;background:var(--acc)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}.cal .h{font-size:12px;color:var(--mute)}
+.d{aspect-ratio:1;border-radius:10px;border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;cursor:pointer;background:var(--bg)}
+.d.n{background:var(--accbg);color:var(--acc);font-weight:700}.d.t{outline:2px solid var(--acc)}.d.sel{border-color:var(--ink)}.d small{font-size:10px}
+.item{padding:8px 0;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:space-between;align-items:flex-start}.item:first-of-type{border-top:0}
+.x{padding:2px 8px;border:0;background:none;color:var(--mute)}
+.big{width:100%;padding:16px;font-size:18px}
+.toast{position:sticky;bottom:12px;background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:12px;display:none;gap:10px;align-items:center;justify-content:space-between}
+.toast a{color:#fff;background:#25a244;padding:8px 12px;border-radius:10px;text-decoration:none;font-weight:600;white-space:nowrap}
+.hide{display:none}.d.b{border:2px solid var(--acc)}.over{font-size:12px;color:#c2410c;font-weight:600}.ds{padding:6px;max-width:112px}
+</style>
+</head>
+<body>
+<main>
+  <div class="row sp"><h1>🧹 Flat Rota</h1><label class="mute">I'm <select id="me"></select></label></div>
+  <div class="tabs"><button data-t="rota" class="on">Rota</button><button data-t="bins">Bins</button><button data-t="notes">Notes</button></div>
+
+  <section id="t-rota">
+    <div class="card"><div class="row sp"><button id="prev">‹</button><div style="text-align:center"><b id="wk"></b><div class="mute" id="wkn"></div></div><button id="next">›</button></div></div>
+    <div class="card"><div class="mute">Cleaning this week</div><div class="turn" id="turn"></div><div class="bar"><i id="prog"></i></div><div class="mute" id="upnext" style="margin-top:8px"></div><div id="tasks" style="margin-top:6px"></div></div>
+    <div class="card">
+      <div class="row sp" style="margin-bottom:10px"><button id="pm">‹</button><b id="mt"></b><button id="nm">›</button></div>
+      <div class="cal" id="cal"></div><div id="dayinfo" class="mute" style="margin-top:10px">Tap a day to book it for cleaning or see what happened.</div>
+    </div>
+  </section>
+
+  <section id="t-bins" class="hide">
+    <div class="card"><button class="p big" id="bin">🗑️ I emptied the bin</button><div class="mute" id="lastbin" style="margin-top:10px"></div></div>
+    <div class="card"><h2>This month</h2><div id="bincount"></div></div>
+    <div class="card"><h2>Recent</h2><div id="binlog"></div></div>
+  </section>
+
+  <section id="t-notes" class="hide">
+    <div class="card"><textarea id="ntext" placeholder="Out of bin bags, boiler noise, guests coming…"></textarea><p><button class="p" id="nadd">Add note</button></p></div>
+    <div class="card"><div id="nlist"></div></div>
+  </section>
+
+  <details class="card"><summary><b>Settings</b></summary>
+    <p class="mute">Names, comma-separated (the weekly turn follows this order):</p><input id="ppl" style="width:100%">
+    <p class="mute">Weekly cleaning tasks, comma-separated:</p><input id="tsk" style="width:100%">
+    <p><button class="p" id="save">Save</button></p><p class="mute" id="sync"></p>
+  </details>
+  <div class="toast" id="toast"><span id="tmsg"></span><a id="wa" target="_blank" rel="noopener">Tell flatmates on WhatsApp</a></div>
+</main>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+// ====== PASTE YOUR FIREBASE CONFIG HERE ======
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyDvXD3wSwKN3bdYzxtlrZ21QSX8CD-hAhw",
+  authDomain:"cleaning-rota-75bfb.firebaseapp.com",
+  projectId:"cleaning-rota-75bfb",
+  appId:"1:696076584502:web:72bf0a4041482b2e147a97"
+};
+// =============================================
+const DEF={people:["Me","Flatmate 2","Flatmate 3"],tasks:["Hoover – living space","Hoover – kitchen","Hoover – lobby","Mop – living space","Mop – kitchen","Mop – lobby"],log:[],bins:[],notes:[],plan:[]};
+let S=JSON.parse(JSON.stringify(DEF)),ref=null,wkOff=0,cm=new Date(),selDay=null,me="";
+const $=id=>document.getElementById(id),pad=n=>String(n).padStart(2,"0");
+const ymd=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const fmt=d=>d.toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function monday(off){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7)+off*7);return d}
+function widx(m){return Math.round((Date.UTC(m.getFullYear(),m.getMonth(),m.getDate())-Date.UTC(2024,0,1))/604800000)}
+function ago(t){const m=Math.round((Date.now()-t)/60000);if(m<1)return"just now";if(m<60)return m+" min ago";const h=Math.round(m/60);if(h<24)return h+" h ago";return new Date(t).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}
+try{me=localStorage.getItem("rota-me")||""}catch(e){}
+const FV=()=>firebase.firestore.FieldValue;
+function persist(){try{localStorage.setItem("rota-state",JSON.stringify(S))}catch(e){}}
+function fail(){$("sync").textContent="Couldn't sync – changes may not be shared."}
+function addItem(f,o){S[f].push(o);if(ref)ref.set({[f]:FV().arrayUnion(o)},{merge:true}).catch(fail);else persist();render()}
+function delItem(f,o){S[f]=S[f].filter(x=>JSON.stringify(x)!==JSON.stringify(o));if(ref)ref.set({[f]:FV().arrayRemove(o)},{merge:true}).catch(fail);else persist();render()}
+function toast(msg,txt){$("tmsg").textContent=msg;$("wa").href="https://wa.me/?text="+encodeURIComponent(txt);const el=$("toast");el.style.display="flex";clearTimeout(window._t);window._t=setTimeout(()=>el.style.display="none",12000)}
+
+function render(){
+  const ppl=S.people;if(!ppl.includes(me))me=ppl[0];
+  $("me").innerHTML=ppl.map(p=>`<option${p===me?" selected":""}>${esc(p)}</option>`).join("");
+  const mon=monday(wkOff),key=ymd(mon),end=new Date(mon);end.setDate(end.getDate()+6);
+  $("wk").textContent=fmt(mon)+" – "+fmt(end);
+  $("wkn").textContent=wkOff===0?"This week":wkOff<0?Math.abs(wkOff)+" wk ago":"In "+wkOff+" wk";
+  const who=ppl[((widx(mon))%ppl.length+ppl.length)%ppl.length];
+  $("turn").textContent=who===me?"Your turn! 💪":who+"'s turn";
+  const done=S.tasks.filter(t=>S.log.some(l=>l.k===key+"|"+t)).length;
+  $("prog").style.width=(S.tasks.length?done/S.tasks.length*100:0)+"%";
+  $("tasks").innerHTML=S.tasks.map((t,i)=>{const e=S.log.find(l=>l.k===key+"|"+t);
+    return `<div class="task${e?" done":""}"><div class="nm">${esc(t)}</div>`+(e?`<span class="chip">✓ ${esc(e.by)}</span><button data-u="${i}" title="Undo">↩</button>`:`<button class="p" data-d="${i}">Done</button>`)+`</div>`}).join("")||`<p class="mute">Add tasks in Settings.</p>`;
+  document.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{const t=S.tasks[+b.dataset.d];addItem("log",{k:key+"|"+t,task:t,by:me,at:Date.now()});
+    const left=S.tasks.filter(x=>!S.log.some(l=>l.k===key+"|"+x)).length;
+    toast("Marked done!",left?`✅ ${me} did "${t}" (week of ${fmt(mon)}). ${left} left this week.`:`🎉 ${me} finished all the cleaning for the week of ${fmt(mon)}!`)});
+  document.querySelectorAll("[data-u]").forEach(b=>b.onclick=()=>{const e=S.log.find(l=>l.k===key+"|"+S.tasks[+b.dataset.u]);if(e)delItem("log",e)});
+  const td=ymd(new Date()),up=S.plan.filter(p=>p.day>=td).sort((a,b)=>a.day<b.day?-1:1).slice(0,3);
+  $("upnext").innerHTML=up.length?"📅 Booked: "+up.map(p=>"<b>"+esc(p.by)+"</b> "+new Date(p.day+"T00:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})).join(" · "):"📅 No cleaning days booked yet – pick one on the calendar.";
+  renderCal();renderBins();renderNotes();
+  $("ppl").value=ppl.join(", ");$("tsk").value=S.tasks.join(", ");
+}
+function renderCal(){
+  const y=cm.getFullYear(),m=cm.getMonth(),first=new Date(y,m,1),days=new Date(y,m+1,0).getDate(),off=(first.getDay()+6)%7;
+  $("mt").textContent=first.toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+  const by={},pl={};
+  S.log.forEach(l=>{const k=ymd(new Date(l.at));(by[k]=by[k]||[]).push("✅ <b>"+esc(l.by)+"</b> – "+esc(l.task))});
+  S.bins.forEach(l=>{const k=ymd(new Date(l.at));(by[k]=by[k]||[]).push("🗑️ <b>"+esc(l.by)+"</b> emptied the bin")});
+  S.plan.forEach(p=>{(pl[p.day]=pl[p.day]||[]).push(p)});
+  window._by=by;window._pl=pl;
+  let h=["M","T","W","T","F","S","S"].map(x=>`<div class="h">${x}</div>`).join("")+"<div></div>".repeat(off);
+  for(let d=1;d<=days;d++){const k=y+"-"+pad(m+1)+"-"+pad(d),n=(by[k]||[]).length,b=pl[k]||[];
+    h+=`<div class="d${n?" n":""}${b.length?" b":""}${k===ymd(new Date())?" t":""}${k===selDay?" sel":""}" data-k="${k}">${d}${b.length?`<small>📅 ${esc(b.map(x=>x.by.slice(0,2)).join(","))}</small>`:n?`<small>${n}✓</small>`:""}</div>`}
+  $("cal").innerHTML=h;
+  document.querySelectorAll("[data-k]").forEach(el=>el.onclick=()=>{selDay=el.dataset.k;renderCal()});
+  renderDay();
+}
+function renderDay(){
+  const el=$("dayinfo");
+  if(!selDay){el.className="mute";el.innerHTML="Tap a day to book it for cleaning or see what happened.";return}
+  el.className="";el.style.fontSize="14px";
+  const b=window._pl[selDay]||[],inf=window._by[selDay]||[],dt=new Date(selDay+"T00:00:00");
+  el.innerHTML=`<div style="font-weight:700;margin-bottom:6px">${dt.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}</div>`+
+    b.map((p,i)=>`<div class="item"><span>📅 <b>${esc(p.by)}</b> is cleaning${p.note?" – "+esc(p.note):""}</span><button class="x" data-px="${i}" title="Remove">×</button></div>`).join("")+
+    inf.map(x=>`<div class="item"><span>${x}</span></div>`).join("")+
+    `<div class="row" style="margin-top:10px"><input id="pnote" placeholder="Note (optional), e.g. mopping" style="flex:1;min-width:0"><button class="p" id="pbook">Book as ${esc(me)}</button></div>`;
+  el.querySelectorAll("[data-px]").forEach(bt=>bt.onclick=()=>delItem("plan",b[+bt.dataset.px]));
+  $("pbook").onclick=()=>{const note=$("pnote").value.trim(),o={day:selDay,by:me,at:Date.now()};if(note)o.note=note;
+    addItem("plan",o);toast("Booked!",`📅 ${me} is cleaning on ${dt.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}${note?" ("+note+")":""}.`)};
+}
+function renderBins(){
+  const L=[...S.bins].sort((a,b)=>b.at-a.at);
+  $("lastbin").textContent=L.length?`Last emptied by ${L[0].by}, ${ago(L[0].at)}`:"Nobody has logged the bins yet.";
+  const ms=new Date(new Date().getFullYear(),new Date().getMonth(),1).getTime(),c={};
+  S.people.forEach(p=>c[p]=0);S.bins.forEach(b=>{if(b.at>=ms)c[b.by]=(c[b.by]||0)+1});
+  $("bincount").innerHTML=Object.entries(c).map(([p,n])=>`<div class="item"><span>${esc(p)}</span><b>${n}</b></div>`).join("");
+  $("binlog").innerHTML=L.slice(0,10).map((b,i)=>`<div class="item"><span>🗑️ <b>${esc(b.by)}</b> <span class="mute">· ${ago(b.at)}</span></span><button class="x" data-bx="${i}" title="Remove">×</button></div>`).join("")||`<p class="mute">Nothing yet.</p>`;
+  document.querySelectorAll("[data-bx]").forEach(b=>b.onclick=()=>delItem("bins",L[+b.dataset.bx]));
+}
+function renderNotes(){
+  const L=[...S.notes].sort((a,b)=>b.at-a.at);
+  $("nlist").innerHTML=L.map((n,i)=>`<div class="item"><span>${esc(n.text).replace(/\n/g,"<br>")}<div class="mute">${esc(n.by)} · ${ago(n.at)}</div></span><button class="x" data-nx="${i}" title="Delete">×</button></div>`).join("")||`<p class="mute">No notes yet.</p>`;
+  document.querySelectorAll("[data-nx]").forEach(b=>b.onclick=()=>delItem("notes",L[+b.dataset.nx]));
+}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));["rota","bins","notes"].forEach(t=>$("t-"+t).classList.toggle("hide",t!==b.dataset.t))});
+$("bin").onclick=()=>{addItem("bins",{by:me,at:Date.now()});toast("Logged!",`🗑️ ${me} emptied the bins.`)};
+$("nadd").onclick=()=>{const t=$("ntext").value.trim();if(!t)return;$("ntext").value="";addItem("notes",{by:me,text:t,at:Date.now()})};
+$("prev").onclick=()=>{wkOff--;render()};$("next").onclick=()=>{wkOff++;render()};
+$("pm").onclick=()=>{cm=new Date(cm.getFullYear(),cm.getMonth()-1,1);renderCal()};
+$("nm").onclick=()=>{cm=new Date(cm.getFullYear(),cm.getMonth()+1,1);renderCal()};
+$("me").onchange=e=>{me=e.target.value;try{localStorage.setItem("rota-me",me)}catch(x){}render()};
+$("save").onclick=()=>{
+  const p=$("ppl").value.split(",").map(x=>x.trim()).filter(Boolean),t=$("tsk").value.split(",").map(x=>x.trim()).filter(Boolean);
+  if(p.length)S.people=p;S.tasks=t;if(ref)ref.set({people:S.people,tasks:S.tasks},{merge:true}).catch(fail);else persist();render()};
+try{const s=localStorage.getItem("rota-state");if(s)S=Object.assign({},DEF,JSON.parse(s))}catch(e){}
+render();
+(function(){
+  try{
+    if(FIREBASE_CONFIG.projectId==="PASTE_HERE"||!window.firebase){$("sync").textContent="Not connected yet – add your Firebase config at the top of the file. Using this device only.";return}
+    firebase.initializeApp(FIREBASE_CONFIG);
+    ref=firebase.firestore().collection("flat").doc("state");
+    $("sync").textContent="Shared: everyone with the link sees the same rota live.";
+    ref.onSnapshot(s=>{if(s.exists){const d=s.data();S={people:d.people||DEF.people,tasks:d.tasks||DEF.tasks,log:d.log||[],bins:d.bins||[],notes:d.notes||[],plan:d.plan||[]}}else{ref.set(S).catch(()=>{})}render()},
+      ()=>{$("sync").textContent="Couldn't connect – check your config and Firestore rules."});
+  }catch(e){$("sync").textContent="Couldn't connect to the database."}
+})();
+</script>
+</body>
+</html>
